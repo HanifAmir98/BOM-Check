@@ -178,7 +178,6 @@
             </tbody>
         </table>
         <button id="copyBtn" class="process-btn" style="width:auto; margin-right:10px;">Copy Table</button>
-        <button id="saveBtn" class="process-btn" style="width:auto;">Save to Excel</button>
     </div>
 
     <div id="addTableContainer" style="display:none; margin-top:30px;">
@@ -197,6 +196,11 @@
             </tbody>
         </table>
         <button id="addRowBtn" class="process-btn" style="width:auto; margin-right:10px;">Add Row</button>
+        <button id="copyAddBtn" class="process-btn" style="width:auto;">Copy Table</button>
+    </div>
+
+    <div style="margin-top:20px; text-align:right;">
+        <button id="saveBtn" class="process-btn" style="width:auto;">Save to Excel</button>
     </div>
     
     <script>
@@ -210,6 +214,7 @@
         document.getElementById('processBtn').addEventListener('click', processExcel);
         document.getElementById('copyBtn')?.addEventListener('click', copyTableToClipboard);
         document.getElementById('saveBtn')?.addEventListener('click', saveToExcel);
+        document.getElementById('copyAddBtn')?.addEventListener('click', copyAddTableToClipboard);
 
         function processExcel() {
             const fileInput = document.getElementById('fileInput');
@@ -480,6 +485,16 @@
 
             // Add new BOM items
             const addTbody = document.getElementById('addTableBody');
+            // Find last ITEM row
+            let lastItemRow = null;
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let r = globalRowInput; r <= range.e.r; r++) {
+                const itemCell = ws[XLSX.utils.encode_cell({c: globalHeaders.indexOf('ITEM'), r})];
+                if (itemCell && itemCell.v !== undefined && itemCell.v !== null && String(itemCell.v).toString().trim() !== '') {
+                    lastItemRow = r;
+                }
+            }
+            let insertRow = lastItemRow !== null ? lastItemRow + 1 : range.e.r + 1;
             for (let i = 0; i < addTbody.children.length; i++) {
                 const tr = addTbody.children[i];
                 const partNo = tr.querySelector('.addPartNoInput')?.value.trim();
@@ -487,14 +502,11 @@
                 const unit = tr.querySelector('.addUnitInput')?.value.trim();
                 const qty = tr.querySelector('.addQtyInput')?.value.trim();
                 if (partNo && desc && unit && qty) {
-                    // Find next empty row
-                    const range = XLSX.utils.decode_range(ws['!ref']);
-                    let newRow = range.e.r + 1;
-                    ws[XLSX.utils.encode_cell({c: partNoColIdx, r: newRow})] = {t:'s', v: partNo};
-                    ws[XLSX.utils.encode_cell({c: descColIdx, r: newRow})] = {t:'s', v: desc};
-                    ws[XLSX.utils.encode_cell({c: unitColIdx, r: newRow})] = {t:'s', v: unit};
-                    ws[XLSX.utils.encode_cell({c: qtyColIdx, r: newRow})] = {t:'n', v: Number(qty)};
-                    ws[XLSX.utils.encode_cell({c: changeDescColIdx, r: newRow})] = {t:'s', v:'New Item Added'};
+                    ws[XLSX.utils.encode_cell({c: partNoColIdx, r: insertRow})] = {t:'s', v: partNo};
+                    ws[XLSX.utils.encode_cell({c: descColIdx, r: insertRow})] = {t:'s', v: desc};
+                    ws[XLSX.utils.encode_cell({c: unitColIdx, r: insertRow})] = {t:'s', v: unit};
+                    ws[XLSX.utils.encode_cell({c: qtyColIdx, r: insertRow})] = {t:'n', v: Number(qty)};
+                    ws[XLSX.utils.encode_cell({c: changeDescColIdx, r: insertRow})] = {t:'s', v:'New Item Added'};
                     changeLog.push({
                         partNo,
                         desc,
@@ -504,7 +516,8 @@
                         changeDesc: 'New Item Added'
                     });
                     // Update worksheet range
-                    ws['!ref'] = XLSX.utils.encode_range({s: range.s, e: {c: range.e.c, r: newRow}});
+                    ws['!ref'] = XLSX.utils.encode_range({s: range.s, e: {c: range.e.c, r: insertRow}});
+                    insertRow++;
                 }
             }
 
@@ -533,6 +546,24 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(a.href);
             }, 100);
+        }
+
+        function copyAddTableToClipboard() {
+            let text = 'Part Number\tDescription\tUnit\tQTY\n';
+            const addTbody = document.getElementById('addTableBody');
+            for (let i = 0; i < addTbody.children.length; i++) {
+                const tr = addTbody.children[i];
+                const partNo = tr.querySelector('.addPartNoInput')?.value.trim();
+                const desc = tr.querySelector('.addDescInput')?.value.trim();
+                const unit = tr.querySelector('.addUnitInput')?.value.trim();
+                const qty = tr.querySelector('.addQtyInput')?.value.trim();
+                if (partNo || desc || unit || qty) {
+                    text += `${partNo || ''}\t${desc || ''}\t${unit || ''}\t${qty || ''}\n`;
+                }
+            }
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Add Table copied to clipboard!');
+            });
         }
     </script>
 </body>
