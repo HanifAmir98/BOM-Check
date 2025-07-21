@@ -406,9 +406,12 @@
                         const cellRef = XLSX.utils.encode_cell({c: partNoColIdx, r});
                         const cell = ws[cellRef];
                         if (cell && String(cell.v).toUpperCase().trim() === row.partNo.toUpperCase()) {
-                            // Write new QTY
+                            // Write new QTY, preserving formatting
                             const qtyCellRef = XLSX.utils.encode_cell({c: qtyColIdx, r});
-                            ws[qtyCellRef] = {t:'n', v: Number(row.newQty)};
+                            if (ws[qtyCellRef]) {
+                                ws[qtyCellRef].v = Number(row.newQty);
+                                ws[qtyCellRef].t = 'n';
+                            }
                             break;
                         }
                     }
