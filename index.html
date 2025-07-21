@@ -324,7 +324,7 @@
                 <td style="border:1px solid #ccc; padding:8px;"><input type="number" class="newQtyInput" data-row="${rowIdx}" style="width:100%" min="0"></td>
             `;
             tbody.appendChild(tr);
-            editRows.push({partNo:'', desc:'', unit:'', oldQty:'', newQty:''});
+            editRows.push({partNo:'', desc:'', unit:'', oldQty:'', newQty:'', qtyCoord: null});
             // Add event listeners
             const partNoInput = tr.querySelector('.partNoInput');
             partNoInput.addEventListener('change', onPartNoInput);
@@ -362,14 +362,15 @@
                     desc: descCell ? descCell.v : '',
                     unit: unitCell ? unitCell.v : '',
                     oldQty: qtyCell ? qtyCell.v : '',
-                    newQty: editRows[rowIdx].newQty || ''
+                    newQty: editRows[rowIdx].newQty || '',
+                    qtyCoord: { row: foundRow, col: qtyColIdx }
                 };
                 tr.querySelector('.newQtyInput').focus();
             } else {
                 tr.querySelector('.descCell').textContent = 'Not found';
                 tr.querySelector('.unitCell').textContent = '';
                 tr.querySelector('.oldQtyCell').textContent = '';
-                editRows[rowIdx] = {partNo, desc:'Not found', unit:'', oldQty:'', newQty:''};
+                editRows[rowIdx] = {partNo, desc:'Not found', unit:'', oldQty:'', newQty:'', qtyCoord: null};
             }
         }
 
@@ -398,22 +399,12 @@
         function saveToExcel() {
             // Update worksheet with new QTYs
             for (const row of editRows) {
-                if (row.partNo && row.desc !== 'Not found' && row.newQty) {
-                    // Find the row again
+                if (row.partNo && row.desc !== 'Not found' && row.newQty && row.qtyCoord) {
                     const ws = globalWorksheet;
-                    const range = XLSX.utils.decode_range(ws['!ref']);
-                    for (let r = globalRowInput; r <= range.e.r; r++) {
-                        const cellRef = XLSX.utils.encode_cell({c: partNoColIdx, r});
-                        const cell = ws[cellRef];
-                        if (cell && String(cell.v).toUpperCase().trim() === row.partNo.toUpperCase()) {
-                            // Write new QTY, preserving formatting
-                            const qtyCellRef = XLSX.utils.encode_cell({c: qtyColIdx, r});
-                            if (ws[qtyCellRef]) {
-                                ws[qtyCellRef].v = Number(row.newQty);
-                                ws[qtyCellRef].t = 'n';
-                            }
-                            break;
-                        }
+                    const qtyCellRef = XLSX.utils.encode_cell({c: row.qtyCoord.col, r: row.qtyCoord.row});
+                    if (ws[qtyCellRef]) {
+                        ws[qtyCellRef].v = Number(row.newQty);
+                        ws[qtyCellRef].t = 'n';
                     }
                 }
             }
