@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Column Validator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .control-panel {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        input[type="number"], 
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .led-container {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+        }
+        .led-label {
+            margin-right: 10px;
+            font-weight: 600;
+        }
+        .led {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #ccc;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        .led.green {
+            background-color: #2ecc71;
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+        }
+        .process-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        .process-btn:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .result.valid {
+            background-color: #e8f8f0;
+            color: #27ae60;
+            border-left: 4px solid #2ecc71;
+            display: block;
+        }
+        .result.invalid {
+            background-color: #fdecea;
+            color: #c0392b;
+            border-left: 4px solid #e74c3c;
+            display: block;
+        }
+        .required-columns {
+            margin-top: 20px;
+        }
+        .required-columns ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .required-columns li {
+            padding: 8px;
+            margin-bottom: 5px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .required-columns li.found {
+            background-color: #e8f8f0;
+            color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <h1>Excel Column Validator</h1>
+    
+    <div class="control-panel">
+        <div class="form-group">
+            <label for="rowInput">Starting Row Number (header is usually row 1):</label>
+            <input type="number" id="rowInput" min="1" value="12">
+        </div>
+        
+        <div class="form-group">
+            <label for="fileInput">Select Excel File:</label>
+            <input type="file" id="fileInput" accept=".xlsx, .xls">
+        </div>
+        
+        <button id="processBtn" class="process-btn">Validate Columns</button>
+        
+        <div class="led-container">
+            <span class="led-label">File Validation Status:</span>
+            <div class="led" id="statusLed"></div>
+        </div>
+    </div>
+    
+    <div class="required-columns">
+        <h3>Required Columns:</h3>
+        <ul>
+            <li id="itemCol">ITEM</li>
+            <li id="descCol">DESCRIPTION</li>
+            <li id="brandCol">BRAND</li>
+            <li id="partCol">PART NO</li>
+            <li id="unitCol">UNIT</li>
+            <li id="qtyCol">QTY</li>
+        </ul>
+    </div>
+    
+    <div id="resultMsg" class="result"></div>
+    
+    <script>
+        document.getElementById('processBtn').addEventListener('click', processExcel);
+        
+        function processExcel() {
+            const fileInput = document.getElementById('fileInput');
+            const rowInput = parseInt(document.getElementById('rowInput').value);
+            const statusLed = document.getElementById('statusLed');
+            const resultMsg = document.getElementById('resultMsg');
+            
+            // Reset UI
+            statusLed.className = 'led';
+            resultMsg.className = 'result';
+            resultMsg.textContent = '';
+            
+            const requiredColumns = ['ITEM', 'DESCRIPTION', 'BRAND', 'PART NO', 'UNIT', 'QTY'];
+            const columnElements = {
+                'ITEM': document.getElementById('itemCol'),
+                'DESCRIPTION': document.getElementById('descCol'),
+                'BRAND': document.getElementById('brandCol'),
+                'PART NO': document.getElementById('partCol'),
+                'UNIT': document.getElementById('unitCol'),
+                'QTY': document.getElementById('qtyCol')
+            };
+            
+            // Reset column highlighting
+            Object.values(columnElements).forEach(el => {
+                el.className = '';
+            });
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                resultMsg.textContent = 'Please select an Excel file first.';
+                resultMsg.className = 'result invalid';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Get the first worksheet
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    
+                    // Get range of the worksheet
+                    const range = XLSX.utils.decode_range(worksheet['!ref']);
+                    
+                    // Check if the specified start row is within the file range
+                    if (rowInput > range.e.r + 1) {
+                        resultMsg.textContent = `The specified starting row (${rowInput}) is beyond the last row (${range.e.r + 1}) in the file.`;
+                        resultMsg.className = 'result invalid';
+                        return;
+                    }
+                    
+                    // Collect all headers from the specified row
+                    const headers = {};
+                    for (let c = range.s.c; c <= range.e.c; c++) {
+                        const cellAddress = { c, r: rowInput - 1 }; // Excel is 0-indexed
+                        const cellRef = XLSX.utils.encode_cell(cellAddress);
+                        const cell = worksheet[cellRef];
+                        
+                        if (cell && cell.t !== 'z') {
+                            const header = String(cell.v).trim().toUpperCase();
+                            headers[header] = true;
+                        }
+                    }
+                    
+                    // Check for required columns
+                    let allFound = true;
+                    const foundColumns = [];
+                    
+                    requiredColumns.forEach(col => {
+                        if (headers[col]) {
+                            foundColumns.push(col);
+                            columnElements[col].className = 'found';
+                        } else {
+                            allFound = false;
+                        }
+                    });
+                    
+                    // Update UI based on validation
+                    if (allFound) {
+                        statusLed.className = 'led green';
+                        resultMsg.textContent = 'All required columns found. This file can be used.';
+                        resultMsg.className = 'result valid';
+                    } else {
+                        resultMsg.textContent = `Missing columns: ${requiredColumns.filter(col => !foundColumns.includes(col)).join(', ')}`;
+                        resultMsg.className = 'result invalid';
+                    }
+                    
+                } catch (error) {
+                    resultMsg.textContent = `Error processing file: ${error.message}`;
+                    resultMsg.className = 'result invalid';
+                    console.error(error);
+                }
+            };
+            
+            reader.onerror = function() {
+                resultMsg.textContent = 'Error reading the file. Please try again.';
+                resultMsg.className = 'result invalid';
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+    </script>
+</body>
+</html>
