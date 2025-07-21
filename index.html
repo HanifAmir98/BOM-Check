@@ -179,6 +179,33 @@
         </table>
         <button id="copyBtn" class="process-btn" style="width:auto; margin-right:10px;">Copy Table</button>
         <button id="saveBtn" class="process-btn" style="width:auto;">Save to Excel</button>
+
+        <div id="addItemContainer" style="margin-top:40px;">
+            <h3>Add New Item to BOM</h3>
+            <table id="addItemTable" style="width:100%; border-collapse:collapse; margin-bottom:10px;">
+                <thead>
+                    <tr style="background:#f0f0f0;">
+                        <th style="border:1px solid #ccc; padding:8px;">Part Number</th>
+                        <th style="border:1px solid #ccc; padding:8px;">Description</th>
+                        <th style="border:1px solid #ccc; padding:8px;">Brand</th>
+                        <th style="border:1px solid #ccc; padding:8px;">Unit</th>
+                        <th style="border:1px solid #ccc; padding:8px;">QTY</th>
+                        <th style="border:1px solid #ccc; padding:8px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="addItemTableBody">
+                    <tr>
+                        <td style="border:1px solid #ccc; padding:8px;"><input type="text" id="newPartNo" style="width:98%; box-sizing:border-box;"></td>
+                        <td style="border:1px solid #ccc; padding:8px;"><input type="text" id="newDesc" style="width:98%; box-sizing:border-box;"></td>
+                        <td style="border:1px solid #ccc; padding:8px;"><input type="text" id="newBrand" style="width:98%; box-sizing:border-box;"></td>
+                        <td style="border:1px solid #ccc; padding:8px;"><input type="text" id="newUnit" style="width:98%; box-sizing:border-box;"></td>
+                        <td style="border:1px solid #ccc; padding:8px;"><input type="number" id="newQty" style="width:98%; box-sizing:border-box;" min="0"></td>
+                        <td style="border:1px solid #ccc; padding:8px;"><button id="addItemBtn" class="process-btn" style="width:auto; padding:6px 12px; font-size:14px;">Add</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div id="addedItemsList"></div>
+        </div>
     </div>
     
     <script>
@@ -188,10 +215,12 @@
         let globalRowInput = null;
         let partNoColIdx = null, descColIdx = null, unitColIdx = null, qtyColIdx = null;
         let editRows = [];
+        let addedItems = [];
 
         document.getElementById('processBtn').addEventListener('click', processExcel);
         document.getElementById('copyBtn')?.addEventListener('click', copyTableToClipboard);
         document.getElementById('saveBtn')?.addEventListener('click', saveToExcel);
+        document.getElementById('addItemBtn')?.addEventListener('click', addNewItem);
 
         function processExcel() {
             const fileInput = document.getElementById('fileInput');
@@ -405,17 +434,105 @@
             });
         }
 
+        function addNewItem() {
+            const partNo = document.getElementById('newPartNo').value.trim();
+            const desc = document.getElementById('newDesc').value.trim();
+            const brand = document.getElementById('newBrand').value.trim();
+            const unit = document.getElementById('newUnit').value.trim();
+            const qty = document.getElementById('newQty').value.trim();
+            if (!partNo || !desc || !brand || !unit || !qty) {
+                alert('Please fill in all fields to add a new item.');
+                return;
+            }
+            addedItems.push({partNo, desc, brand, unit, qty});
+            updateAddedItemsList();
+            document.getElementById('newPartNo').value = '';
+            document.getElementById('newDesc').value = '';
+            document.getElementById('newBrand').value = '';
+            document.getElementById('newUnit').value = '';
+            document.getElementById('newQty').value = '';
+        }
+
+        function updateAddedItemsList() {
+            const div = document.getElementById('addedItemsList');
+            if (addedItems.length === 0) {
+                div.innerHTML = '';
+                return;
+            }
+            let html = '<h4>Items to be added:</h4><ul>';
+            for (const item of addedItems) {
+                html += `<li><b>${item.partNo}</b> - ${item.desc} (${item.brand}), ${item.unit}, QTY: ${item.qty}</li>`;
+            }
+            html += '</ul>';
+            div.innerHTML = html;
+        }
+
         function saveToExcel() {
-            // Update worksheet with new QTYs
+            // Update worksheet with new QTYs and add change log
+            let changesTable = [['Part Number','Description','Unit','Old QTY','New QTY','Change Log']];
             for (const row of editRows) {
                 if (row.partNo && row.desc !== 'Not found' && row.newQty && row.qtyCoord) {
                     const ws = globalWorksheet;
                     const qtyCellRef = XLSX.utils.encode_cell({c: row.qtyCoord.col, r: row.qtyCoord.row});
                     if (ws[qtyCellRef]) {
+                        // Add change log after QTY
+                        const oldQty = ws[qtyCellRef].v;
                         ws[qtyCellRef].v = Number(row.newQty);
                         ws[qtyCellRef].t = 'n';
+                        // Insert change log cell after QTY
+                        const changeLogCol = row.qtyCoord.col + 1;
+                        const changeLogCellRef = XLSX.utils.encode_cell({c: changeLogCol, r: row.qtyCoord.row});
+                        ws[changeLogCellRef] = {t:'s', v: `Change QTY from ${oldQty} to ${row.newQty}`};
+                        // Add to changes table
+                        changesTable.push([
+                            row.partNo,
+                            row.desc,
+                            row.unit,
+                            oldQty,
+                            row.newQty,
+                            `Change QTY from ${oldQty} to ${row.newQty}`
+                        ]);
                     }
                 }
+            }
+            // Add new items to BOM
+            if (addedItems.length > 0) {
+                // Find the last row
+                const ws = globalWorksheet;
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                let lastRow = range.e.r + 1;
+                for (const item of addedItems) {
+                    // Write each field in the correct column
+                    ws[XLSX.utils.encode_cell({c: globalHeaders.indexOf('PART NO'), r: lastRow})] = {t:'s', v: item.partNo};
+                    ws[XLSX.utils.encode_cell({c: globalHeaders.indexOf('DESCRIPTION'), r: lastRow})] = {t:'s', v: item.desc};
+                    ws[XLSX.utils.encode_cell({c: globalHeaders.indexOf('BRAND'), r: lastRow})] = {t:'s', v: item.brand};
+                    ws[XLSX.utils.encode_cell({c: globalHeaders.indexOf('UNIT'), r: lastRow})] = {t:'s', v: item.unit};
+                    ws[XLSX.utils.encode_cell({c: globalHeaders.indexOf('QTY'), r: lastRow})] = {t:'n', v: Number(item.qty)};
+                    // Optionally, add a change log for new items
+                    ws[XLSX.utils.encode_cell({c: globalHeaders.indexOf('QTY')+1, r: lastRow})] = {t:'s', v: `Added new item with QTY ${item.qty}`};
+                    // Add to changes table as well
+                    changesTable.push([
+                        item.partNo,
+                        item.desc,
+                        item.unit,
+                        '',
+                        item.qty,
+                        `Added new item with QTY ${item.qty}`
+                    ]);
+                    lastRow++;
+                }
+            }
+            // Add header for change log if not present
+            const ws = globalWorksheet;
+            const qtyHeaderCol = globalHeaders.indexOf('QTY');
+            const changeLogHeaderCol = qtyHeaderCol + 1;
+            const headerRow = globalRowInput - 1;
+            ws[XLSX.utils.encode_cell({c: changeLogHeaderCol, r: headerRow})] = {t:'s', v: 'CHANGE LOG'};
+            // Create a new sheet for changes
+            const changesSheet = XLSX.utils.aoa_to_sheet(changesTable);
+            globalWorkbook.Sheets['QTY Changes'] = changesSheet;
+            if (!globalWorkbook.SheetNames.includes('QTY Changes')) {
+                globalWorkbook.SheetNames.push('QTY Changes');
             }
             // Save file
             const wbout = XLSX.write(globalWorkbook, {bookType:'xlsx', type:'array'});
