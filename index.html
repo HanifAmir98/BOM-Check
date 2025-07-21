@@ -114,6 +114,15 @@
             background-color: #e8f8f0;
             color: #27ae60;
         }
+        #editTable input[type="text"], #editTable input[type="number"] {
+            width: 98%;
+            box-sizing: border-box;
+            padding: 6px 4px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -317,11 +326,11 @@
             const rowIdx = editRows.length;
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="border:1px solid #ccc; padding:8px;"><input type="text" class="partNoInput" data-row="${rowIdx}" style="max-width:120px;"></td>
+                <td style="border:1px solid #ccc; padding:8px;"><input type="text" class="partNoInput" data-row="${rowIdx}" style="width:98%; box-sizing:border-box;"></td>
                 <td style="border:1px solid #ccc; padding:8px;" class="descCell"></td>
                 <td style="border:1px solid #ccc; padding:8px;" class="unitCell"></td>
                 <td style="border:1px solid #ccc; padding:8px;" class="oldQtyCell"></td>
-                <td style="border:1px solid #ccc; padding:8px;"><input type="number" class="newQtyInput" data-row="${rowIdx}" style="max-width:80px;" min="0"></td>
+                <td style="border:1px solid #ccc; padding:8px;"><input type="number" class="newQtyInput" data-row="${rowIdx}" style="width:98%; box-sizing:border-box;" min="0"></td>
             `;
             tbody.appendChild(tr);
             editRows.push({partNo:'', desc:'', unit:'', oldQty:'', newQty:'', qtyCoord: null});
