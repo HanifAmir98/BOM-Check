@@ -317,11 +317,11 @@
             const rowIdx = editRows.length;
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="border:1px solid #ccc; padding:8px;"><input type="text" class="partNoInput" data-row="${rowIdx}" style="width:100%"></td>
+                <td style="border:1px solid #ccc; padding:8px;"><input type="text" class="partNoInput" data-row="${rowIdx}" style="max-width:120px;"></td>
                 <td style="border:1px solid #ccc; padding:8px;" class="descCell"></td>
                 <td style="border:1px solid #ccc; padding:8px;" class="unitCell"></td>
                 <td style="border:1px solid #ccc; padding:8px;" class="oldQtyCell"></td>
-                <td style="border:1px solid #ccc; padding:8px;"><input type="number" class="newQtyInput" data-row="${rowIdx}" style="width:100%" min="0"></td>
+                <td style="border:1px solid #ccc; padding:8px;"><input type="number" class="newQtyInput" data-row="${rowIdx}" style="max-width:80px;" min="0"></td>
             `;
             tbody.appendChild(tr);
             editRows.push({partNo:'', desc:'', unit:'', oldQty:'', newQty:'', qtyCoord: null});
