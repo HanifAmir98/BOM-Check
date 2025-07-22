@@ -151,7 +151,7 @@
         <h3>Required Columns:</h3>
         <ul>
             <li id="itemCol">ITEM</li>
-            <li id="descCol">DESCRIPTION</li>
+            <li id="descCol">PART DESCRIPTION</li>
             <li id="brandCol">BRAND</li>
             <li id="partCol">PART NO</li>
             <li id="unitCol">UNIT</li>
@@ -167,7 +167,7 @@
             <thead>
                 <tr style="background:#f0f0f0;">
                     <th style="border:1px solid #ccc; padding:8px;">Part Number</th>
-                    <th style="border:1px solid #ccc; padding:8px;">Description</th>
+                    <th style="border:1px solid #ccc; padding:8px;">Part Description</th>
                     <th style="border:1px solid #ccc; padding:8px;">Unit</th>
                     <th style="border:1px solid #ccc; padding:8px;">Old QTY</th>
                     <th style="border:1px solid #ccc; padding:8px;">New QTY</th>
@@ -186,7 +186,7 @@
             <thead>
                 <tr style="background:#f0f0f0;">
                     <th style="border:1px solid #ccc; padding:8px;">Part Number</th>
-                    <th style="border:1px solid #ccc; padding:8px;">Description</th>
+                    <th style="border:1px solid #ccc; padding:8px;">Part Description</th>
                     <th style="border:1px solid #ccc; padding:8px;">Brand</th>
                     <th style="border:1px solid #ccc; padding:8px;">Unit</th>
                     <th style="border:1px solid #ccc; padding:8px;">QTY</th>
@@ -225,10 +225,10 @@
             resultMsg.textContent = '';
             document.getElementById('editTableContainer').style.display = 'none';
             
-            const requiredColumns = ['ITEM', 'DESCRIPTION', 'BRAND', 'PART NO', 'UNIT', 'QTY'];
+            const requiredColumns = ['ITEM', 'PART DESCRIPTION', 'BRAND', 'PART NO', 'UNIT', 'QTY'];
             const columnElements = {
                 'ITEM': document.getElementById('itemCol'),
-                'DESCRIPTION': document.getElementById('descCol'),
+                'PART DESCRIPTION': document.getElementById('descCol'),
                 'BRAND': document.getElementById('brandCol'),
                 'PART NO': document.getElementById('partCol'),
                 'UNIT': document.getElementById('unitCol'),
@@ -308,7 +308,7 @@
                         globalHeaders = headerArr;
                         globalRowInput = rowInput;
                         partNoColIdx = headerArr.indexOf('PART NO');
-                        descColIdx = headerArr.indexOf('DESCRIPTION');
+                        descColIdx = headerArr.indexOf('PART DESCRIPTION');
                         unitColIdx = headerArr.indexOf('UNIT');
                         qtyColIdx = headerArr.indexOf('QTY');
                         editRows = [];
@@ -441,7 +441,7 @@
         }
 
         function copyTableToClipboard() {
-            let text = 'Part Number\tDescription\tUnit\tOld QTY\tNew QTY\n';
+            let text = 'Part Number\tPart Description\tUnit\tOld QTY\tNew QTY\n';
             for (const row of editRows) {
                 if (row.partNo && row.desc !== 'Not found' && row.newQty) {
                     text += `${row.partNo}\t${row.desc}\t${row.unit}\t${row.oldQty}\t${row.newQty}\n`;
@@ -453,7 +453,7 @@
         }
 
         function copyAddTableToClipboard() {
-            let text = 'Part Number\tDescription\tBrand\tUnit\tQTY\n';
+            let text = 'Part Number\tPart Description\tBrand\tUnit\tQTY\n';
             const addTbody = document.getElementById('addTableBody');
             for (let i = 0; i < addTbody.children.length; i++) {
                 const tr = addTbody.children[i];
@@ -554,7 +554,7 @@
             // Create Change Log sheet
             if (changeLog.length > 0) {
                 const logSheetData = [
-                    ['Part Number', 'Description', 'Brand', 'Unit', 'Old QTY', 'New QTY', 'Change Description'],
+                    ['Part Number', 'Part Description', 'Brand', 'Unit', 'Old QTY', 'New QTY', 'Change Description'],
                     ...changeLog.map(row => [row.partNo, row.desc, row.brand || '', row.unit, row.oldQty, row.newQty, row.changeDesc])
                 ];
                 const logSheet = XLSX.utils.aoa_to_sheet(logSheetData);
